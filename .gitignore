@@ -1,0 +1,63 @@
+**/.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.env
+
+# Output files
+*.csv
+optimization_suggestions_*.csv
+schema.json
+setup_env.sh
+
+# Google Cloud credentials
+*-key.json
+*-credentials.json
+*.json.key
+credentials.json
+service-account*.json
+*-8fe770ea99a8.json
+finops360-dev-2025-*.json
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Local configuration
+local_config.py
+
+# Temporary files
+*.tmp
+*~
