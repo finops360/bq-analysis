@@ -1,59 +1,127 @@
 #!/bin/bash
-# run_analysis.sh - Run the BigQuery optimization analysis
+# BigQuery Optimization Analysis Runner
+# This script runs the BigQuery Optimizer
 
-# Default key file
-KEY_FILE="$HOME/finops360-dev-2025-8fe770ea99a8.json"
-CSV_OUTPUT=1  # Default to CSV output for reliability
+set -e
+
+# Default configuration
+CONFIG_FILE="bigquery_optimizer/config/config.yaml"
+VERBOSE=false
+
+# Display usage information
+function show_usage {
+  echo "Usage: $0 [options]"
+  echo "Options:"
+  echo "  -p, --project PROJECT_ID   Override GCP Project ID"
+  echo "  -d, --days DAYS            Override number of days of query history to analyze"
+  echo "  -o, --output FILE          Override output file for recommendations"
+  echo "  -c, --config FILE          Use alternate config file (default: config.yaml)"
+  echo "  -n, --no-llm               Disable LLM-based recommendations"
+  echo "  -v, --verbose              Enable verbose logging"
+  echo "  -h, --help                 Show this help message"
+  echo
+  echo "Example:"
+  echo "  $0 --project my-project --days 15 --no-llm"
+}
 
 # Parse command line arguments
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --key-file) KEY_FILE="$2"; shift ;;
-        --project) PROJECT="$2"; shift ;;
-        --dataset) DATASET="$2"; shift ;;
-        --table) TABLE="$2"; shift ;;
-        --help) SHOW_HELP=1 ;;
-        *) echo "Unknown parameter: $1"; exit 1 ;;
-    esac
-    shift
+PARAMS=""
+while (( "$#" )); do
+  case "$1" in
+    -p|--project)
+      PROJECT_ID="$2"
+      shift 2
+      ;;
+    -d|--days)
+      LOOKBACK_DAYS="$2"
+      shift 2
+      ;;
+    -o|--output)
+      OUTPUT_FILE="$2"
+      shift 2
+      ;;
+    -c|--config)
+      CONFIG_FILE="$2"
+      shift 2
+      ;;
+    -n|--no-llm)
+      NO_LLM=true
+      shift
+      ;;
+    -v|--verbose)
+      VERBOSE=true
+      shift
+      ;;
+    -h|--help)
+      show_usage
+      exit 0
+      ;;
+    --) # end argument parsing
+      shift
+      break
+      ;;
+    -*|--*=) # unsupported flags
+      echo "Error: Unsupported flag $1" >&2
+      show_usage
+      exit 1
+      ;;
+    *) # preserve positional arguments
+      PARAMS="$PARAMS $1"
+      shift
+      ;;
+  esac
 done
 
-# Show help if requested
-if [[ -n "$SHOW_HELP" ]]; then
-    echo "Usage: $0 [options]"
-    echo "Options:"
-    echo "  --key-file FILE    Path to the service account key file (default: $KEY_FILE)"
-    echo "  --project PROJECT  Override output project ID"
-    echo "  --dataset DATASET  Override output dataset"
-    echo "  --table TABLE      Override output table name"
-    echo "  --help             Show this help message"
-    exit 0
+# Set positional arguments in their proper place
+eval set -- "$PARAMS"
+
+# Build the command
+CMD="python -m bigquery_optimizer.main --config $CONFIG_FILE"
+
+# Add optional arguments
+if [ ! -z "$PROJECT_ID" ]; then
+  CMD="$CMD --project-id $PROJECT_ID"
 fi
 
-# Check if key file exists
-if [[ ! -f "$KEY_FILE" ]]; then
-    echo "Error: Service account key file not found: $KEY_FILE"
-    echo "Please provide a valid key file with --key-file"
-    exit 1
+if [ ! -z "$LOOKBACK_DAYS" ]; then
+  CMD="$CMD --lookback-days $LOOKBACK_DAYS"
 fi
 
-# Export credentials for Google API
-export GOOGLE_APPLICATION_CREDENTIALS="$KEY_FILE"
-echo "Using service account key: $KEY_FILE"
-
-# Override output table if specified
-if [[ -n "$PROJECT" && -n "$DATASET" && -n "$TABLE" ]]; then
-    export OUTPUT_TABLE="${PROJECT}.${DATASET}.${TABLE}"
-    echo "Using custom output table: $OUTPUT_TABLE"
+if [ ! -z "$OUTPUT_FILE" ]; then
+  CMD="$CMD --output-file $OUTPUT_FILE"
 fi
 
-# Generate timestamp for CSV output
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-CSV_FILE="optimization_suggestions_${TIMESTAMP}.csv"
+if [ "$NO_LLM" = true ]; then
+  CMD="$CMD --no-llm"
+fi
 
-# Run the analyzer with CSV output for reliability
-echo -e "\nRunning BigQuery optimization analysis"
-python3 bq_analyzer.py --csv-output "$CSV_FILE"
+if [ "$VERBOSE" = true ]; then
+  CMD="$CMD --verbose"
+fi
 
-echo -e "\nAnalysis complete!"
-echo "Results saved to CSV file: $CSV_FILE"
+# Print configuration
+echo "BigQuery Optimizer Configuration:"
+echo "  Config file: $CONFIG_FILE"
+if [ ! -z "$PROJECT_ID" ]; then
+  echo "  Project ID: $PROJECT_ID"
+fi
+if [ ! -z "$LOOKBACK_DAYS" ]; then
+  echo "  Lookback days: $LOOKBACK_DAYS"
+fi
+if [ ! -z "$OUTPUT_FILE" ]; then
+  echo "  Output file: $OUTPUT_FILE"
+fi
+if [ "$NO_LLM" = true ]; then
+  echo "  LLM analysis: Disabled"
+else
+  echo "  LLM analysis: Enabled"
+fi
+echo
+
+# Run the command
+echo "Running: $CMD"
+echo
+eval $CMD
+
+echo
+echo "BigQuery Optimizer analysis complete!"

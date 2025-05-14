@@ -1,6 +1,6 @@
 **/.claude/settings.local.json
 
-# Python
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
@@ -21,28 +21,55 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# Virtual Environment
-venv/
+# Virtual environments
 env/
+venv/
 ENV/
+env.bak/
+venv.bak/
 .env
 
-# Output files
-*.csv
-optimization_suggestions_*.csv
-schema.json
-setup_env.sh
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Google Cloud credentials
-*-key.json
-*-credentials.json
-*.json.key
-credentials.json
-service-account*.json
-*-8fe770ea99a8.json
-finops360-dev-2025-*.json
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDE specific files
 .idea/
@@ -50,14 +77,19 @@ finops360-dev-2025-*.json
 *.swp
 *.swo
 .DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Logs
-*.log
-logs/
+# Project specific
+reports/*.html
+!reports/.gitkeep
+credentials.json
+config.yaml
 
-# Local configuration
-local_config.py
-
-# Temporary files
-*.tmp
-*~
+# Generated data
+tmp/
+temp/
+*.csv 
+.claude/

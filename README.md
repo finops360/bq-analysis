@@ -1,282 +1,174 @@
-# BigQuery Optimization Analysis Tool
+# BigQuery Optimizer
 
-This tool analyzes BigQuery tables across your organization's projects to provide data-driven cost optimization suggestions and collects detailed metadata about table usage and configuration. It helps identify cost-saving opportunities and performance improvements in your BigQuery environment.
+A comprehensive tool for analyzing and optimizing BigQuery resources. This tool provides both heuristic and LLM-based recommendations for improving BigQuery performance and reducing costs.
 
 ## Features
 
-- Automatic table creation with bq command line tool
-- Comprehensive metadata collection and analysis
-- Detailed cost optimization recommendations with estimated savings
-- Support for organization-wide scanning or manual project list
-- CSV output for data analysis
-- Well-defined optimization criteria based on industry best practices
-
-## Prerequisites
-
-- Python 3.7+
-- Google Cloud SDK installed with bq command line tool
-- Service account with BigQuery access
-- Required Python packages (see requirements.txt)
+- **Metadata Collection**: Collect detailed metadata about BigQuery tables and query history
+- **Heuristic Analysis**: Generate optimization recommendations based on best practices and table/query patterns
+- **LLM Integration**: Get intelligent recommendations using LLM analysis of queries
+- **Quadrant Vector DB**: Store and search schema information for context-aware recommendations
+- **Comprehensive Recommendations**:
+  - Partitioning optimization
+  - Clustering optimization
+  - Query structure improvement
+  - Materialized views
+  - Table lifecycle management
+  - Column and data type optimization
 
 ## Installation
 
-1. Install required packages:
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/your-username/bigquery_optimization.git
+   cd bigquery_optimization
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-2. Ensure you have a service account key file with appropriate permissions.
+3. Ensure you have set up authentication for Google Cloud:
+   ```bash
+   gcloud auth application-default login
+   ```
+
+4. (Optional) Set up Ollama and Quadrant for LLM-based recommendations:
+   - Install Ollama: https://ollama.ai/
+   - Install Quadrant: https://qdrant.tech/documentation/quick-start/
 
 ## Configuration
 
-Configure the tool by editing the `config.py` file or setting environment variables:
+Edit `bigquery_optimizer/config/config.yaml` to customize settings:
 
-- `ORG_ID`: Your Google Cloud organization ID (if applicable)
-- `OUTPUT_TABLE`: BigQuery table for storing results (format: "project.dataset.table")
-- `PROJECT_QUERY`: Custom query for filtering projects (if using organization scanning)
-- `MANUAL_PROJECT_LIST`: List of project IDs to scan (used if no ORG_ID is provided)
+```yaml
+# Project Settings
+project_id: your-gcp-project-id
+lookback_days: 30
+
+# LLM Settings
+use_llm: true
+ollama_endpoint: http://127.0.0.1:11434/api/generate
+ollama_model: llama3
+temperature: 0.2
+max_tokens: 4096
+
+# Quadrant Settings
+quadrant_endpoint: http://localhost:6333
+quadrant_collection: bigquery_schemas
+vector_dimension: 768
+
+# Output Settings
+output_metadata_file: table_metadata.csv
+output_queries_file: query_history.csv
+output_recommendations_file: query_recommendations.csv
+
+# Analysis Settings
+table_size_threshold: 0.01  # GB, very low to include all tables
+min_query_count: 0  # No minimum query count
+recommendation_limit: 100  # Maximum recommendations to return
+```
 
 ## Usage
 
-The tool is split into multiple scripts for greater flexibility:
-
-### 1. Setup Output Table
+Run the optimizer with default settings:
 
 ```bash
-./setup_table.sh
-```
-
-This script creates the BigQuery dataset and table if they don't exist, using the bq command line tool.
-
-### 2. Run Analysis
-
-```bash
-./run_analysis.sh --key-file PATH_TO_KEY_FILE
-```
-
-Options:
-- `--key-file FILE`: Path to service account key file (required)
-- `--project PROJECT`: Override output project ID
-- `--dataset DATASET`: Override output dataset
-- `--table TABLE`: Override output table name
-- `--help`: Show help message
-
-### 3. All-in-One Script
-
-For convenience, you can run the entire workflow:
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS=~/path/to/your-key-file.json
 ./run_analysis.sh
 ```
 
-Results will be saved to a timestamped CSV file in the current directory.
-
-## Analysis Example
-
-Here's an example of analyzing a BigQuery project with several tables:
+Override configuration settings:
 
 ```bash
-$ ./run_analysis.sh --key-file service-account.json
-
-Using service account key: service-account.json
-
-Running BigQuery optimization analysis
-
-Analysis complete!
-Results saved to CSV file: optimization_suggestions_20250504_123045.csv
+./run_analysis.sh --project my-project-id --days 15 --no-llm
 ```
 
-### Example Output
+Available options:
 
-The analysis produces a CSV file with detailed table metadata and optimization suggestions. Here's a sample excerpt:
+```
+  -p, --project PROJECT_ID   Override GCP Project ID
+  -d, --days DAYS            Override number of days of query history to analyze
+  -o, --output FILE          Override output file for recommendations
+  -c, --config FILE          Use alternate config file (default: config.yaml)
+  -n, --no-llm               Disable LLM-based recommendations
+  -v, --verbose              Enable verbose logging
+  -h, --help                 Show this help message
+```
 
-| project_id | dataset_id | table_id | table_size_gb | row_count | is_partitioned | is_clustered | suggestions |
-|------------|------------|----------|--------------|-----------|----------------|--------------|-------------|
-| finops-project | analytics | transactions | 15.6 | 45000000 | false | false | ["Consider partitioning/clustering large table (20-50% cost reduction).", "Very large table; prune unused columns or apply filters (10-30% cost saving).", "Consider materialized views for frequent queries (30-70% cost/performance improvement)."] |
-| finops-project | analytics | customer_events | 8.2 | 12500000 | true | false | ["Cluster large partitioned table (20-40% query performance improvement).", "Require partition filters on partitioned table (30-90% cost reduction)."] |
-| finops-project | reporting | daily_summary | 0.5 | 365 | false | false | ["No description; add for discoverability (reduces accidental queries ~10%).", "No labels; add labels for governance (indirect cost control benefits)."] |
+## Architecture
 
-### Interpretation
+The BigQuery Optimizer is structured into several components:
 
-For the `transactions` table:
-1. It's a large table (15.6GB) without partitioning or clustering
-2. Three optimization suggestions are provided:
-   - Partitioning would reduce costs by 20-50%
-   - Pruning unused columns could save 10-30%
-   - Using materialized views could improve performance by 30-70%
-   
-For the `customer_events` table:
-1. It's already partitioned (good), but not clustered
-2. Two optimization suggestions:
-   - Adding clustering would improve performance by 20-40%
-   - Requiring partition filters would reduce costs by 30-90%
+1. **Analysis Module**: Collects and analyzes metadata about BigQuery resources
+   - Metadata collection
+   - Heuristic analysis
+   - Recommendation generation
 
-For the `daily_summary` table:
-1. It's a smaller table with governance recommendations:
-   - Adding descriptions would improve discoverability
-   - Adding labels would help with governance
+2. **Vector Database Module**: Manages schema information storage
+   - Quadrant integration
+   - Schema embeddings
+   - Similarity search
 
-After collecting this data, review the `RECOMMENDATIONS.md` file for detailed explanations and implementation guidance for each suggestion.
+3. **LLM Module**: Analyzes queries using LLMs
+   - Ollama integration
+   - Context-aware query analysis
+   - SQL optimization
 
-## Optimization Suggestions
+## Recommendations
 
-The tool analyzes tables against a comprehensive set of optimization criteria, producing actionable recommendations with estimated savings. For detailed explanation of each recommendation, see [RECOMMENDATIONS.md](RECOMMENDATIONS.md).
+The optimizer generates several types of recommendations:
 
-### Cost Optimization Criteria
-- **Partitioning opportunities** - Large tables that should be partitioned (20-50% savings)
-- **Sharded table patterns** - Legacy date-sharded tables that should be converted (up to 80% savings)
-- **Partition filter requirements** - Partitioned tables should require filters (30-90% savings)
-- **Storage optimizations** - Table expiration and lifecycle policies (10-40% storage savings)
-- **Batch vs. streaming** - Converting streaming to batch loads (50%+ cost reduction)
+- **Partitioning**: Identify tables that would benefit from partitioning
+- **Clustering**: Suggest clustering columns for improved query performance
+- **Query Optimization**: Provide suggestions for improving query efficiency
+- **Materialized Views**: Identify opportunities for using materialized views
+- **Data Type Optimization**: Suggest better data types for specific columns
+- **Table Lifecycle**: Recommendations for table expiration and cleanup
 
-### Performance Optimization Criteria
-- **Clustering opportunities** - Tables that would benefit from clustering (20-40% improvement)
-- **Materialized view candidates** - Frequently queried aggregations (30-70% improvement)
-- **Schema optimizations** - Nested schema and column count analysis (10-25% improvement)
-- **BI Engine candidates** - Tables used for dashboards (up to 50% performance gain)
-- **Incremental load patterns** - Detecting large, frequently updated tables (20-40% improvement)
+For more details, see [RECOMMENDATIONS.md](bigquery_optimizer/docs/RECOMMENDATIONS.md).
 
-### Governance Criteria
-- **Labeling** - Tables missing cost attribution and governance labels
-- **Documentation** - Tables without proper descriptions
-- **Naming conventions** - Tables with non-descriptive names
 
-Each suggestion includes an estimated potential cost reduction or performance improvement, based on typical observed values in production environments.
 
-## Output Schema
+  1. README.md - Main documentation
+  2. requirements.txt - Python dependencies
+  3. run_analysis.sh - Entry point script
+  4. bigquery_optimizer/ - Main package with all code and documentation
 
-The tool collects and stores the following metadata for each table:
+  The project is now organized as follows:
 
-- Basic identifiers (project, dataset, table)
-- Size information (bytes, GB, row count)
-- Partitioning and clustering details
-- Age and modification information
-- Configuration details
-- Schema information
-- Usage patterns
+  bigquery_optimization/
+  ├── README.md                           # Main documentation
+  ├── requirements.txt                    # Python dependencies
+  ├── run_analysis.sh                     # Entry point script
+  └── bigquery_optimizer/                 # Main package
+      ├── __init__.py                     # Package initialization
+      ├── analysis/                       # Analysis module
+      │   ├── __init__.py
+      │   ├── heuristic_analyzer.py       # Heuristic recommendations
+      │   └── metadata_collector.py       # Table metadata collection
+      ├── config/                         # Configuration
+      │   └── config.yaml                 # Main configuration file
+      ├── docs/                           # Documentation
+      │   └── RECOMMENDATIONS.md          # Detailed recommendations
+      ├── llm_analyzer.py                 # LLM analysis module
+      ├── main.py                         # Main entry point
+      ├── output/                         # Output directory
+      │   ├── query_history.csv
+      │   ├── query_recommendations.csv
+      │   └── table_metadata.csv
+      ├── utils/                          # Utility functions
+      │   ├── __init__.py
+      │   └── config.py                   # Configuration loader
+      └── vectordb/                       # Vector database module
+          ├── __init__.py
+          └── quadrant_manager.py         # Quadrant integration
+          
 
-## Troubleshooting
+## Contributing
 
-If you encounter authentication errors:
-1. Make sure your service account key file exists and has the correct permissions
-2. Use the `--key-file` option to specify the key file path
-3. Check if the service account has access to the projects you're trying to analyze
-
-For error messages:
-1. Check the logs for specific error messages
-2. Verify the output CSV file exists and contains data
-3. For BigQuery access issues, make sure the service account has BigQuery Admin or appropriate permissions
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-Copyright (c) 2025 FinOps360
-
-## Customization for Your Environment
-
-The BigQuery Optimization Analysis Tool can be easily customized for different projects and environments. Here's how to adapt the tool for your specific needs:
-
-### Changing Target Projects
-
-To analyze different BigQuery projects:
-
-1. Edit `config.py` and update the `MANUAL_PROJECT_LIST`:
-
-```python
-# Example: Replace with your project IDs
-MANUAL_PROJECT_LIST = [
-    "my-analytics-project",
-    "my-data-warehouse",
-    "my-marketing-data"
-]
-```
-
-2. Or use organization-wide scanning by setting an environment variable:
-
-```bash
-export ORG_ID="123456789012"  # Your Google Cloud Organization ID
-```
-
-### Changing Output Location
-
-To change where optimization suggestions are stored:
-
-1. Edit `config.py` and update the `OUTPUT_TABLE` variable:
-
-```python
-# Example: Replace with your desired output location
-OUTPUT_TABLE = "my-project.analytics_admin.bq_optimizations"
-# Format: "project.dataset.table"
-```
-
-2. Or set an environment variable when running the script:
-
-```bash
-export OUTPUT_TABLE="my-project.analytics_admin.bq_optimizations"
-./run_analysis.sh
-```
-
-### Customizing Analysis Criteria
-
-To adjust the optimization thresholds:
-
-1. Edit `optimization_criteria.py` and modify the threshold values:
-
-```python
-# Example: Change the threshold for large tables from 1GB to 5GB
-SIZE_CRITERIA = {
-    "large_unpartitioned": {
-        "threshold": 5,  # GB (changed from 1GB to 5GB)
-        # ... rest of the configuration
-    },
-    # ... other criteria
-}
-```
-
-### Demo Setup Example
-
-For a quick demo setup:
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/example/bigquery-optimization.git
-cd bigquery-optimization
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Configure for demo environment (using example values)
-cat > config.py << EOF
-import os
-
-# Authentication Configuration
-CREDENTIALS_FILE = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-
-# Organization Configuration
-ORG_ID = os.environ.get("ORG_ID", "")
-
-# Output table (modify this for your demo)
-OUTPUT_TABLE = os.environ.get("OUTPUT_TABLE", "demo-project-123.analytics.optimization_suggestions")
-
-# Parse the output table into its components
-OUTPUT_PROJECT, OUTPUT_DATASET, OUTPUT_TABLE_NAME = OUTPUT_TABLE.split(".")
-
-# Project query (if using organization-based scanning)
-PROJECT_QUERY = os.environ.get("PROJECT_QUERY", f"parent.type:organization parent.id:{ORG_ID} state:ACTIVE")
-
-# Manual project list (modify these for your demo)
-MANUAL_PROJECT_LIST = [
-    "demo-project-123",
-    "demo-analytics-456"
-]
-
-# Rest of the configuration remains unchanged
-EOF
-
-# 4. Run the analysis (assuming service account key is already set up)
-export GOOGLE_APPLICATION_CREDENTIALS=~/demo-project-key.json
-./run_analysis.sh
-```
-
-This will analyze the specified demo projects and save results to a CSV file in the current directory.
+This project is licensed under the MIT License - see the LICENSE file for details.
