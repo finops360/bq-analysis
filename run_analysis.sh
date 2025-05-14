@@ -7,6 +7,10 @@ set -e
 # Default configuration
 CONFIG_FILE="bigquery_optimizer/config/config.yaml"
 VERBOSE=false
+SKIP_METADATA=false
+SKIP_QUERIES=false
+SKIP_VECTOR_DB=false  # Using vector DB by default now that we've fixed the issues
+QUERY_LIMIT=10
 
 # Display usage information
 function show_usage {
@@ -18,10 +22,17 @@ function show_usage {
   echo "  -c, --config FILE          Use alternate config file (default: config.yaml)"
   echo "  -n, --no-llm               Disable LLM-based recommendations"
   echo "  -v, --verbose              Enable verbose logging"
+  echo
+  echo "  --skip-metadata            Skip collecting table metadata (use existing data)"
+  echo "  --skip-queries             Skip collecting query history (use existing data)"
+  echo "  --skip-vector-db           Skip using vector database for schema storage"
+  echo "  --query-limit NUM          Maximum number of queries to analyze with LLM (default: 10)"
   echo "  -h, --help                 Show this help message"
   echo
-  echo "Example:"
+  echo "Examples:"
   echo "  $0 --project my-project --days 15 --no-llm"
+  echo "  $0 --skip-metadata --skip-queries  # Use existing data files only"
+  echo "  $0 --skip-vector-db  # Skip vector database steps but still use LLM"
 }
 
 # Parse command line arguments
@@ -52,6 +63,22 @@ while (( "$#" )); do
       VERBOSE=true
       shift
       ;;
+    --skip-metadata)
+      SKIP_METADATA=true
+      shift
+      ;;
+    --skip-queries)
+      SKIP_QUERIES=true
+      shift
+      ;;
+    --skip-vector-db)
+      SKIP_VECTOR_DB=true
+      shift
+      ;;
+    --query-limit)
+      QUERY_LIMIT="$2"
+      shift 2
+      ;;
     -h|--help)
       show_usage
       exit 0
@@ -76,7 +103,7 @@ done
 eval set -- "$PARAMS"
 
 # Build the command
-CMD="python -m bigquery_optimizer.main --config $CONFIG_FILE"
+CMD="python3 -m bigquery_optimizer.main --config $CONFIG_FILE"
 
 # Add optional arguments
 if [ ! -z "$PROJECT_ID" ]; then
@@ -99,6 +126,23 @@ if [ "$VERBOSE" = true ]; then
   CMD="$CMD --verbose"
 fi
 
+# Add optional stage control arguments
+if [ "$SKIP_METADATA" = true ]; then
+  CMD="$CMD --skip-metadata"
+fi
+
+if [ "$SKIP_QUERIES" = true ]; then
+  CMD="$CMD --skip-queries"
+fi
+
+if [ "$SKIP_VECTOR_DB" = true ]; then
+  CMD="$CMD --skip-vector-db"
+fi
+
+if [ ! -z "$QUERY_LIMIT" ]; then
+  CMD="$CMD --query-limit $QUERY_LIMIT"
+fi
+
 # Print configuration
 echo "BigQuery Optimizer Configuration:"
 echo "  Config file: $CONFIG_FILE"
@@ -116,6 +160,25 @@ if [ "$NO_LLM" = true ]; then
 else
   echo "  LLM analysis: Enabled"
 fi
+
+# Print optional stages configuration
+echo "Optional stages:"
+if [ "$SKIP_METADATA" = true ]; then
+  echo "  Metadata collection: Skipped (using existing data)"
+else
+  echo "  Metadata collection: Enabled"
+fi
+if [ "$SKIP_QUERIES" = true ]; then
+  echo "  Query history collection: Skipped (using existing data)"
+else
+  echo "  Query history collection: Enabled"
+fi
+if [ "$SKIP_VECTOR_DB" = true ]; then
+  echo "  Vector database: Skipped"
+else
+  echo "  Vector database: Enabled"
+fi
+echo "  Query limit for LLM analysis: $QUERY_LIMIT"
 echo
 
 # Run the command

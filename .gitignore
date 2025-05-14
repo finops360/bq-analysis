@@ -1,6 +1,4 @@
-**/.claude/settings.local.json
-
-# Python bytecode
+# Python bytecode and caching
 __pycache__/
 *.py[cod]
 *$py.class
@@ -21,6 +19,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # Virtual environments
 env/
@@ -30,46 +32,17 @@ env.bak/
 venv.bak/
 .env
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Claude specific
+.claude/
+**/.claude/
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Testing
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Logs
-logs/
+# Data and output files
+*.csv
+*.json
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+logs/
+tmp/
+temp/
 
 # IDE specific files
 .idea/
@@ -77,19 +50,8 @@ yarn-error.log*
 *.swp
 *.swo
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Project specific
-reports/*.html
-!reports/.gitkeep
+bigquery_optimizer/output/
+bigquery_optimizer/config/config.yaml
 credentials.json
-config.yaml
-
-# Generated data
-tmp/
-temp/
-*.csv 
-.claude/

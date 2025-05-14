@@ -34,9 +34,19 @@ A comprehensive tool for analyzing and optimizing BigQuery resources. This tool 
    gcloud auth application-default login
    ```
 
-4. (Optional) Set up Ollama and Quadrant for LLM-based recommendations:
+4. Set up Ollama and Quadrant for LLM-based recommendations:
    - Install Ollama: https://ollama.ai/
-   - Install Quadrant: https://qdrant.tech/documentation/quick-start/
+   - Install Quadrant using Docker Compose (recommended):
+     ```bash
+     docker-compose up -d
+     ```
+   - Verify Quadrant setup with the included test script:
+     ```bash
+     ./test_quadrant.py
+     ```
+   - Alternatively, install Quadrant directly: https://qdrant.tech/documentation/quick-start/
+
+   The tool now uses Quadrant for optimal vector database functionality, but includes a robust fallback if Quadrant is unavailable or if the vector database is disabled with the `--skip-vector-db` flag.
 
 ## Configuration
 
@@ -93,8 +103,15 @@ Available options:
   -c, --config FILE          Use alternate config file (default: config.yaml)
   -n, --no-llm               Disable LLM-based recommendations
   -v, --verbose              Enable verbose logging
+
+  --skip-metadata            Skip collecting table metadata (use existing data)
+  --skip-queries             Skip collecting query history (use existing data)
+  --skip-vector-db           Skip using vector database for schema storage
+  --query-limit NUM          Maximum number of queries to analyze with LLM (default: 10)
   -h, --help                 Show this help message
 ```
+
+The tool uses the Quadrant vector database by default for better semantic similarity between schemas. If Quadrant is not available or you prefer the fallback approach, use the `--skip-vector-db` flag.
 
 ## Architecture
 
@@ -106,9 +123,11 @@ The BigQuery Optimizer is structured into several components:
    - Recommendation generation
 
 2. **Vector Database Module**: Manages schema information storage
-   - Quadrant integration
-   - Schema embeddings
-   - Similarity search
+   - Quadrant integration (optional)
+   - Schema embeddings via two methods:
+     - LLM-based summary embeddings using Ollama
+     - Fallback hash-based embeddings when Quadrant is not available
+   - Similarity search with graceful degradation
 
 3. **LLM Module**: Analyzes queries using LLMs
    - Ollama integration
