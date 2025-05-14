@@ -19,9 +19,15 @@ This document outlines the improvements made to the BigQuery Optimizer's vector 
    - Implemented SQL parsing to extract table names from query text
    - Added validation and filtering for table IDs
 
-4. **Added Utility Tools**
+4. **Fixed Referenced Tables Variable Scope**
+   - Properly passed referenced_tables to extraction methods
+   - Ensured table_id is always set in recommendations
+   - Added default fallback to "unknown_table" when needed
+
+5. **Added Utility and Testing Tools**
    - Created test_quadrant.py for verifying Quadrant connectivity
    - Added clean_quadrant.py for resetting collections
+   - Created test_llm_parser.py for testing recommendation extraction
    - Improved logging for better debugging
 
 ## Issues Addressed
